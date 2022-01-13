@@ -16,6 +16,7 @@ import (
 	mssql "github.com/denisenkom/go-mssqldb" // mssql support
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -104,7 +105,6 @@ func WithInstance(instance *sql.DB, config *Config) (database.Driver, error) {
 	}
 
 	conn, err := instance.Conn(context.Background())
-
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,6 @@ func (ss *SQLServer) Open(url string) (database.Driver, error) {
 		DatabaseName:    purl.Path,
 		MigrationsTable: migrationsTable,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -256,9 +255,12 @@ func (ss *SQLServer) Run(migration io.Reader) error {
 	return nil
 }
 
+func (ss *SQLServer) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 // SetVersion for the current database
 func (ss *SQLServer) SetVersion(version int, dirty bool) error {
-
 	tx, err := ss.conn.BeginTx(context.Background(), &sql.TxOptions{})
 	if err != nil {
 		return &database.Error{OrigErr: err, Err: "transaction start failed"}
@@ -315,7 +317,6 @@ func (ss *SQLServer) Version() (version int, dirty bool, err error) {
 
 // Drop all tables from the database.
 func (ss *SQLServer) Drop() error {
-
 	// drop all referential integrity constraints
 	query := `
 	DECLARE @Sql NVARCHAR(500) DECLARE @Cursor CURSOR

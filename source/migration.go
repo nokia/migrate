@@ -1,7 +1,13 @@
 package source
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"sort"
+	"text/tabwriter"
 )
 
 // Direction is either up or down.
@@ -11,6 +17,19 @@ const (
 	Down Direction = "down"
 	Up   Direction = "up"
 )
+
+type Status string
+
+const (
+	Skipped Status = "skipped"
+	Pending Status = "pending"
+	Done    Status = "done"
+	Failed  Status = "failed"
+)
+
+type MigrationFunc func(ctx context.Context, db interface{}) error
+
+var MgrFunctions = make(map[string]MigrationFunc) // map of filename and functions                           // current release
 
 // Migration is a helper struct for source drivers that need to
 // build the full directory tree in memory.
@@ -29,6 +48,11 @@ type Migration struct {
 	// Raw holds the raw location path to this migration in source.
 	// ReadUp and ReadDown will use this.
 	Raw string
+
+	// status of the migration
+	Status Status
+
+	Error string
 }
 
 // Migrations wraps Migration and has an internal index
@@ -126,8 +150,57 @@ func (i *Migrations) findPos(version uint) int {
 	return -1
 }
 
+func (i *Migrations) MarkSkipMigrations(version uint, dir Direction) {
+	for idx := range i.index {
+		if dir == Up && i.index[idx] <= version {
+			// mark all older version as skipped.
+			i.migrations[i.index[idx]][dir].Status = Skipped
+		} else if dir == Down && i.index[idx] >= version {
+			// mark all newer version as skipped.
+			i.migrations[i.index[idx]][dir].Status = Skipped
+		}
+	}
+}
+
+func (i *Migrations) UpdateStatus(version uint, status Status, errstr string) {
+	if _, ok := i.migrations[version]; ok {
+		if mx, ok := i.migrations[version][Up]; ok {
+			mx.Status = status
+			mx.Error = errstr
+		}
+		if mx, ok := i.migrations[version][Down]; ok {
+			mx.Status = status
+			mx.Error = errstr
+		}
+	}
+}
+
+func (i *Migrations) PrintSummary(dir Direction) {
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 8, 8, 0, '\t', 0)
+	defer w.Flush()
+	fmt.Fprintf(w, "\n\t\t%s\n\n", "+++++ Migration Summary +++++")
+	fmt.Fprintf(w, "\t%s\t%s\t%s\t\n", "Migration Source", "Status", "Error")
+	fmt.Fprintf(w, "\t%s\t%s\t%s\t\n", "----------------", "------", "-----")
+	for idx := range i.index {
+		fmt.Fprintf(w, "\t%s\t%s\t%s\t\n",
+			i.migrations[i.index[idx]][dir].Raw,
+			i.migrations[i.index[idx]][dir].Status,
+			i.migrations[i.index[idx]][dir].Error)
+	}
+
+	fmt.Fprintf(w, "\t%s\t%s\t%s\t\n", "----------------", "------", "-----")
+}
+
 type uintSlice []uint
 
 func (s uintSlice) Search(x uint) int {
 	return sort.Search(len(s), func(i int) bool { return s[i] >= x })
+}
+
+// register go migration function
+func RegisterFuncMigration(fn MigrationFunc) {
+	_, file, _, _ := runtime.Caller(1)
+	name := filepath.Base(file)
+	MgrFunctions[name] = fn
 }

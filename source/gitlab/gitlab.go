@@ -10,9 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-)
 
-import (
 	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/xanzy/go-gitlab"
 )
@@ -42,8 +40,7 @@ type Gitlab struct {
 	migrations  *source.Migrations
 }
 
-type Config struct {
-}
+type Config struct{}
 
 func (g *Gitlab) Open(url string) (source.Driver, error) {
 	u, err := nurl.Parse(url)
@@ -195,46 +192,58 @@ func (g *Gitlab) Next(version uint) (nextVersion uint, err error) {
 	}
 }
 
-func (g *Gitlab) ReadUp(version uint) (r io.ReadCloser, identifier string, err error) {
+func (g *Gitlab) ReadUp(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	if m, ok := g.migrations.Up(version); ok {
 		f, response, err := g.client.RepositoryFiles.GetFile(g.projectID, m.Raw, g.getOptions)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 
 		if response.StatusCode != http.StatusOK {
-			return nil, "", ErrInvalidResponse
+			return nil, "", "", nil, ErrInvalidResponse
 		}
 
 		content, err := base64.StdEncoding.DecodeString(f.Content)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 
-		return ioutil.NopCloser(strings.NewReader(string(content))), m.Identifier, nil
+		return ioutil.NopCloser(strings.NewReader(string(content))), m.Identifier, m.Raw, nil, nil
 	}
 
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.path, Err: os.ErrNotExist}
 }
 
-func (g *Gitlab) ReadDown(version uint) (r io.ReadCloser, identifier string, err error) {
+func (g *Gitlab) ReadDown(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	if m, ok := g.migrations.Down(version); ok {
 		f, response, err := g.client.RepositoryFiles.GetFile(g.projectID, m.Raw, g.getOptions)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 
 		if response.StatusCode != http.StatusOK {
-			return nil, "", ErrInvalidResponse
+			return nil, "", "", nil, ErrInvalidResponse
 		}
 
 		content, err := base64.StdEncoding.DecodeString(f.Content)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 
-		return ioutil.NopCloser(strings.NewReader(string(content))), m.Identifier, nil
+		return ioutil.NopCloser(strings.NewReader(string(content))), m.Identifier, m.Raw, nil, nil
 	}
 
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.path, Err: os.ErrNotExist}
+}
+
+func (g *Gitlab) MarkSkipMigrations(version uint, dir source.Direction) {
+	g.migrations.MarkSkipMigrations(version, dir)
+}
+
+func (g *Gitlab) UpdateStatus(version uint, status source.Status, errstr string) {
+	g.migrations.UpdateStatus(version, status, errstr)
+}
+
+func (g *Gitlab) PrintSummary(dir source.Direction) {
+	g.migrations.PrintSummary(dir)
 }

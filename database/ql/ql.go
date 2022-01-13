@@ -3,16 +3,18 @@ package ql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/go-multierror"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	"strings"
+
+	"github.com/hashicorp/go-multierror"
+	"go.uber.org/atomic"
 
 	nurl "net/url"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/source"
 	_ "modernc.org/ql/driver"
 )
 
@@ -123,9 +125,11 @@ func (m *Ql) Open(url string) (database.Driver, error) {
 	}
 	return mx, nil
 }
+
 func (m *Ql) Close() error {
 	return m.db.Close()
 }
+
 func (m *Ql) Drop() (err error) {
 	query := `SELECT Name FROM __Table`
 	tables, err := m.db.Query(query)
@@ -166,18 +170,21 @@ func (m *Ql) Drop() (err error) {
 
 	return nil
 }
+
 func (m *Ql) Lock() error {
 	if !m.isLocked.CAS(false, true) {
 		return database.ErrLocked
 	}
 	return nil
 }
+
 func (m *Ql) Unlock() error {
 	if !m.isLocked.CAS(true, false) {
 		return database.ErrNotLocked
 	}
 	return nil
 }
+
 func (m *Ql) Run(migration io.Reader) error {
 	migr, err := ioutil.ReadAll(migration)
 	if err != nil {
@@ -187,6 +194,11 @@ func (m *Ql) Run(migration io.Reader) error {
 
 	return m.executeQuery(query)
 }
+
+func (m *Ql) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func (m *Ql) executeQuery(query string) error {
 	tx, err := m.db.Begin()
 	if err != nil {
@@ -203,6 +215,7 @@ func (m *Ql) executeQuery(query string) error {
 	}
 	return nil
 }
+
 func (m *Ql) SetVersion(version int, dirty bool) error {
 	tx, err := m.db.Begin()
 	if err != nil {

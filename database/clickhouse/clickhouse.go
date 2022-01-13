@@ -15,6 +15,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/multistmt"
+	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -164,6 +165,11 @@ func (ch *ClickHouse) Run(r io.Reader) error {
 
 	return nil
 }
+
+func (ch *ClickHouse) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func (ch *ClickHouse) Version() (int, bool, error) {
 	var (
 		version int
@@ -262,7 +268,6 @@ func (ch *ClickHouse) ensureVersionTable() (err error) {
 func (ch *ClickHouse) Drop() (err error) {
 	query := "SHOW TABLES FROM " + ch.config.DatabaseName
 	tables, err := ch.conn.Query(query)
-
 	if err != nil {
 		return &database.Error{OrigErr: err, Query: []byte(query)}
 	}
@@ -298,6 +303,7 @@ func (ch *ClickHouse) Lock() error {
 
 	return nil
 }
+
 func (ch *ClickHouse) Unlock() error {
 	if !ch.isLocked.CAS(true, false) {
 		return database.ErrNotLocked

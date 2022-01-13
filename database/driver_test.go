@@ -3,6 +3,8 @@ package database
 import (
 	"io"
 	"testing"
+
+	"github.com/golang-migrate/migrate/v4/source"
 )
 
 func ExampleDriver() {
@@ -37,6 +39,10 @@ func (m *mockDriver) Unlock() error {
 }
 
 func (m *mockDriver) Run(migration io.Reader) error {
+	return nil
+}
+
+func (m *mockDriver) RunFunctionMigration(fn source.MigrationFunc) error {
 	return nil
 }
 

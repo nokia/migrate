@@ -3,7 +3,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"golang.org/x/oauth2"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"golang.org/x/oauth2"
 
 	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/google/go-github/v39/github"
@@ -113,7 +114,6 @@ func (g *Github) readDirectory() error {
 		g.config.Path,
 		g.options,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func (g *Github) Next(version uint) (nextVersion uint, err error) {
 	}
 }
 
-func (g *Github) ReadUp(version uint) (r io.ReadCloser, identifier string, err error) {
+func (g *Github) ReadUp(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	g.ensureFields()
 
 	if m, ok := g.migrations.Up(version); ok {
@@ -185,22 +185,21 @@ func (g *Github) ReadUp(version uint) (r io.ReadCloser, identifier string, err e
 			path.Join(g.config.Path, m.Raw),
 			g.options,
 		)
-
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 		if file != nil {
 			r, err := file.GetContent()
 			if err != nil {
-				return nil, "", err
+				return nil, "", "", nil, err
 			}
-			return ioutil.NopCloser(strings.NewReader(r)), m.Identifier, nil
+			return ioutil.NopCloser(strings.NewReader(r)), m.Identifier, m.Raw, nil, nil
 		}
 	}
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.config.Path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.config.Path, Err: os.ErrNotExist}
 }
 
-func (g *Github) ReadDown(version uint) (r io.ReadCloser, identifier string, err error) {
+func (g *Github) ReadDown(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	g.ensureFields()
 
 	if m, ok := g.migrations.Down(version); ok {
@@ -211,17 +210,28 @@ func (g *Github) ReadDown(version uint) (r io.ReadCloser, identifier string, err
 			path.Join(g.config.Path, m.Raw),
 			g.options,
 		)
-
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 		if file != nil {
 			r, err := file.GetContent()
 			if err != nil {
-				return nil, "", err
+				return nil, "", "", nil, err
 			}
-			return ioutil.NopCloser(strings.NewReader(r)), m.Identifier, nil
+			return ioutil.NopCloser(strings.NewReader(r)), m.Identifier, m.Raw, nil, nil
 		}
 	}
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.config.Path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: g.config.Path, Err: os.ErrNotExist}
+}
+
+func (g *Github) MarkSkipMigrations(version uint, dir source.Direction) {
+	g.migrations.MarkSkipMigrations(version, dir)
+}
+
+func (g *Github) UpdateStatus(version uint, status source.Status, errstr string) {
+	g.migrations.UpdateStatus(version, status, errstr)
+}
+
+func (g *Github) PrintSummary(dir source.Direction) {
+	g.migrations.PrintSummary(dir)
 }

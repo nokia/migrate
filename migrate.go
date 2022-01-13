@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -80,6 +81,9 @@ type Migrate struct {
 	// LockTimeout defaults to DefaultLockTimeout,
 	// but can be set per Migrate instance.
 	LockTimeout time.Duration
+
+	// Current application release
+	AppReleaseStr string
 }
 
 // New returns a new Migrate instance from a source URL and a database URL.
@@ -274,12 +278,21 @@ func (m *Migrate) Up() error {
 		return m.unlockErr(err)
 	}
 
+	if curVersion >= 0 {
+		if dirty {
+			m.sourceDrv.MarkSkipMigrations(uint(curVersion-1), source.Up)
+		} else {
+			m.sourceDrv.MarkSkipMigrations(uint(curVersion), source.Up)
+		}
+	}
+
+	m.sourceDrv.PrintSummary(source.Up)
+
 	if dirty {
 		return m.unlockErr(ErrDirty{curVersion})
 	}
 
 	ret := make(chan interface{}, m.PrefetchMigrations)
-
 	go m.readUp(curVersion, -1, ret)
 	return m.unlockErr(m.runMigrations(ret))
 }
@@ -744,6 +757,13 @@ func (m *Migrate) runMigrations(ret <-chan interface{}) error {
 			if migr.Body != nil {
 				m.logVerbosePrintf("Read and execute %v\n", migr.LogString())
 				if err := m.databaseDrv.Run(migr.BufferedBody); err != nil {
+					m.sourceDrv.UpdateStatus(migr.Version, source.Failed, err.Error())
+					return err
+				}
+			} else if migr.MigrationFunc != nil {
+				m.logVerbosePrintf("Running Migration function %v\n", migr.LogString())
+				if err := m.databaseDrv.RunFunctionMigration(migr.MigrationFunc); err != nil {
+					m.sourceDrv.UpdateStatus(migr.Version, source.Failed, err.Error())
 					return err
 				}
 			}
@@ -757,6 +777,12 @@ func (m *Migrate) runMigrations(ret <-chan interface{}) error {
 			readTime := migr.FinishedReading.Sub(migr.StartedBuffering)
 			runTime := endTime.Sub(migr.FinishedReading)
 
+			// update status
+			if migr.Skipped {
+				m.sourceDrv.UpdateStatus(migr.Version, source.Skipped, "")
+			} else {
+				m.sourceDrv.UpdateStatus(migr.Version, source.Done, "")
+			}
 			// log either verbose or normal
 			if m.Log != nil {
 				if m.Log.Verbose() {
@@ -777,11 +803,13 @@ func (m *Migrate) runMigrations(ret <-chan interface{}) error {
 // the specified migration version exists.
 func (m *Migrate) versionExists(version uint) (result error) {
 	// try up migration first
-	up, _, err := m.sourceDrv.ReadUp(version)
+	up, _, _, _, err := m.sourceDrv.ReadUp(version)
 	if err == nil {
 		defer func() {
-			if errClose := up.Close(); errClose != nil {
-				result = multierror.Append(result, errClose)
+			if up != nil {
+				if errClose := up.Close(); errClose != nil {
+					result = multierror.Append(result, errClose)
+				}
 			}
 		}()
 	}
@@ -792,11 +820,13 @@ func (m *Migrate) versionExists(version uint) (result error) {
 	}
 
 	// then try down migration
-	down, _, err := m.sourceDrv.ReadDown(version)
+	down, _, _, _, err := m.sourceDrv.ReadDown(version)
 	if err == nil {
 		defer func() {
-			if errClose := down.Close(); errClose != nil {
-				result = multierror.Append(result, errClose)
+			if down != nil {
+				if errClose := down.Close(); errClose != nil {
+					result = multierror.Append(result, errClose)
+				}
 			}
 		}()
 	}
@@ -835,7 +865,9 @@ func (m *Migrate) newMigration(version uint, targetVersion int) (*Migration, err
 	var migr *Migration
 
 	if targetVersion >= int(version) {
-		r, identifier, err := m.sourceDrv.ReadUp(version)
+		r, identifier, loc, fn, err := m.sourceDrv.ReadUp(version)
+		// skip up migration based on current release
+		skipMgr := m.skipMigration(loc)
 		if errors.Is(err, os.ErrNotExist) {
 			// create "empty" migration
 			migr, err = NewMigration(nil, "", version, targetVersion)
@@ -843,9 +875,14 @@ func (m *Migrate) newMigration(version uint, targetVersion int) (*Migration, err
 				return nil, err
 			}
 
+		} else if skipMgr {
+			fmt.Printf("Skiping migration for :%v\n", loc)
+			migr = NewSkippedMigration("", version, targetVersion)
 		} else if err != nil {
 			return nil, err
-
+		} else if fn != nil {
+			// create migration with function
+			migr = NewFuncMigration(fn, identifier, version, targetVersion)
 		} else {
 			// create migration from up source
 			migr, err = NewMigration(r, identifier, version, targetVersion)
@@ -855,7 +892,8 @@ func (m *Migrate) newMigration(version uint, targetVersion int) (*Migration, err
 		}
 
 	} else {
-		r, identifier, err := m.sourceDrv.ReadDown(version)
+		r, identifier, _, fn, err := m.sourceDrv.ReadDown(version)
+		// lets not skip down migration based on release string.
 		if errors.Is(err, os.ErrNotExist) {
 			// create "empty" migration
 			migr, err = NewMigration(nil, "", version, targetVersion)
@@ -865,7 +903,9 @@ func (m *Migrate) newMigration(version uint, targetVersion int) (*Migration, err
 
 		} else if err != nil {
 			return nil, err
-
+		} else if fn != nil {
+			// create migration with function
+			migr = NewFuncMigration(fn, identifier, version, targetVersion)
 		} else {
 			// create migration from down source
 			migr, err = NewMigration(r, identifier, version, targetVersion)
@@ -882,6 +922,14 @@ func (m *Migrate) newMigration(version uint, targetVersion int) (*Migration, err
 	}
 
 	return migr, nil
+}
+
+func (m *Migrate) skipMigration(location string) bool {
+	parentDir := filepath.Dir(location)
+	if parentDir != "." && parentDir < m.AppReleaseStr {
+		return true
+	}
+	return false
 }
 
 // lock is a thread safe helper function to lock the database.
@@ -978,4 +1026,12 @@ func (m *Migrate) logErr(err error) {
 	if m.Log != nil {
 		m.Log.Printf("error: %v", err)
 	}
+}
+
+func (m *Migrate) PrintSummary(dir source.Direction) {
+	m.sourceDrv.PrintSummary(dir)
+}
+
+func (m *Migrate) GetDBDriver() database.Driver {
+	return m.databaseDrv
 }

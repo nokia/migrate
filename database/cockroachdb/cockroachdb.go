@@ -4,23 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"regexp"
 	"strconv"
-)
 
-import (
 	"github.com/cockroachdb/cockroach-go/v2/crdb"
-	"github.com/hashicorp/go-multierror"
-	"github.com/lib/pq"
-)
-
-import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/hashicorp/go-multierror"
+	"github.com/lib/pq"
+	"go.uber.org/atomic"
 )
 
 func init() {
@@ -30,8 +26,10 @@ func init() {
 	database.Register("crdb-postgres", &db)
 }
 
-var DefaultMigrationsTable = "schema_migrations"
-var DefaultLockTable = "schema_lock"
+var (
+	DefaultMigrationsTable = "schema_migrations"
+	DefaultLockTable       = "schema_lock"
+)
 
 var (
 	ErrNilConfig      = fmt.Errorf("no config")
@@ -229,6 +227,10 @@ func (c *CockroachDb) Run(migration io.Reader) error {
 	}
 
 	return nil
+}
+
+func (c *CockroachDb) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 func (c *CockroachDb) SetVersion(version int, dirty bool) error {

@@ -3,7 +3,6 @@ package cassandra
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
@@ -11,9 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/atomic"
+
 	"github.com/gocql/gocql"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/multistmt"
+	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -233,6 +235,10 @@ func (c *Cassandra) Run(migration io.Reader) error {
 		return database.Error{OrigErr: err, Err: "migration failed", Query: migr}
 	}
 	return nil
+}
+
+func (c *Cassandra) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 func (c *Cassandra) SetVersion(version int, dirty bool) error {

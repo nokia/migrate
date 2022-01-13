@@ -10,17 +10,21 @@ import (
 	"sync"
 
 	iurl "github.com/golang-migrate/migrate/v4/internal/url"
+	"github.com/golang-migrate/migrate/v4/source"
 )
 
 var (
 	ErrLocked    = fmt.Errorf("can't acquire lock")
 	ErrNotLocked = fmt.Errorf("can't unlock, as not currently locked")
+	ErrNotImpl   = fmt.Errorf("not implemented operation")
 )
 
 const NilVersion int = -1
 
-var driversMu sync.RWMutex
-var drivers = make(map[string]Driver)
+var (
+	driversMu sync.RWMutex
+	drivers   = make(map[string]Driver)
+)
 
 // Driver is the interface every database driver must implement.
 //
@@ -64,6 +68,9 @@ type Driver interface {
 
 	// Run applies a migration to the database. migration is guaranteed to be not nil.
 	Run(migration io.Reader) error
+
+	// Run for function migration
+	RunFunctionMigration(fn source.MigrationFunc) error
 
 	// SetVersion saves version and dirty state.
 	// Migrate will call this function before and after each call to Run.

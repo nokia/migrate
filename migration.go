@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/golang-migrate/migrate/v4/source"
 )
 
 // DefaultBufferSize sets the in memory buffer size (in Bytes) for every
@@ -54,6 +56,12 @@ type Migration struct {
 
 	// BytesRead holds the number of Bytes read from the migration source.
 	BytesRead int64
+
+	// Go Migration Function to be called.
+	MigrationFunc source.MigrationFunc
+
+	// marked migration as skipped.
+	Skipped bool
 }
 
 // NewMigration returns a new Migration and sets the body, identifier,
@@ -81,6 +89,7 @@ func NewMigration(body io.ReadCloser, identifier string,
 		Version:       version,
 		TargetVersion: targetVersion,
 		Scheduled:     tnow,
+		Skipped:       false,
 	}
 
 	if body == nil {
@@ -100,6 +109,41 @@ func NewMigration(body io.ReadCloser, identifier string,
 	m.BufferedBody = br
 	m.bufferWriter = bw
 	return m, nil
+}
+
+func NewFuncMigration(fn source.MigrationFunc, identifier string,
+	version uint, targetVersion int) *Migration {
+	tnow := time.Now()
+	m := &Migration{
+		Identifier:        identifier,
+		Version:           version,
+		TargetVersion:     targetVersion,
+		Scheduled:         tnow,
+		StartedBuffering:  tnow,
+		FinishedBuffering: tnow,
+		FinishedReading:   tnow,
+		MigrationFunc:     fn,
+		Skipped:           false,
+	}
+
+	return m
+}
+
+func NewSkippedMigration(identifier string,
+	version uint, targetVersion int) *Migration {
+	tnow := time.Now()
+	m := &Migration{
+		Identifier:        identifier,
+		Version:           version,
+		TargetVersion:     targetVersion,
+		Scheduled:         tnow,
+		StartedBuffering:  tnow,
+		FinishedBuffering: tnow,
+		FinishedReading:   tnow,
+		Skipped:           true,
+	}
+
+	return m
 }
 
 // String implements string.Stringer and is used in tests.

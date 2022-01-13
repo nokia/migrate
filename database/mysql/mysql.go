@@ -9,15 +9,17 @@ import (
 	"crypto/x509"
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"strconv"
 	"strings"
 
+	"go.uber.org/atomic"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -333,6 +335,10 @@ func (m *Mysql) Run(migration io.Reader) error {
 	}
 
 	return nil
+}
+
+func (m *Mysql) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 func (m *Mysql) SetVersion(version int, dirty bool) error {

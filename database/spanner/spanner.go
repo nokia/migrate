@@ -1,6 +1,7 @@
 package spanner
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,14 +12,13 @@ import (
 	"strconv"
 	"strings"
 
-	"context"
-
 	"cloud.google.com/go/spanner"
 	sdb "cloud.google.com/go/spanner/admin/database/apiv1"
 	"cloud.google.com/go/spanner/spansql"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/source"
 
 	"github.com/hashicorp/go-multierror"
 	uatomic "go.uber.org/atomic"
@@ -189,7 +189,6 @@ func (s *Spanner) Run(migration io.Reader) error {
 		Database:   s.config.DatabaseName,
 		Statements: stmts,
 	})
-
 	if err != nil {
 		return &database.Error{OrigErr: err, Err: "migration failed", Query: migr}
 	}
@@ -199,6 +198,10 @@ func (s *Spanner) Run(migration io.Reader) error {
 	}
 
 	return nil
+}
+
+func (s *Spanner) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 // SetVersion implements database.Driver
@@ -212,7 +215,8 @@ func (s *Spanner) SetVersion(version int, dirty bool) error {
 				spanner.Insert(s.config.MigrationsTable,
 					[]string{"Version", "Dirty"},
 					[]interface{}{version, dirty},
-				)}
+				),
+			}
 			return txn.BufferWrite(m)
 		})
 	if err != nil {
@@ -331,7 +335,6 @@ func (s *Spanner) ensureVersionTable() (err error) {
 		Database:   s.config.DatabaseName,
 		Statements: []string{stmt},
 	})
-
 	if err != nil {
 		return &database.Error{OrigErr: err, Query: []byte(stmt)}
 	}

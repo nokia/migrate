@@ -4,14 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"strconv"
 	"strings"
 
+	"go.uber.org/atomic"
+
 	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/hashicorp/go-multierror"
 	"github.com/lib/pq"
 	sf "github.com/snowflakedb/gosnowflake"
@@ -74,7 +76,6 @@ func WithInstance(instance *sql.DB, config *Config) (database.Driver, error) {
 	}
 
 	conn, err := instance.Conn(context.Background())
-
 	if err != nil {
 		return nil, err
 	}
@@ -203,6 +204,10 @@ func (p *Snowflake) Run(migration io.Reader) error {
 	}
 
 	return nil
+}
+
+func (p *Snowflake) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 func computeLineFromPos(s string, pos int) (line uint, col uint, ok bool) {

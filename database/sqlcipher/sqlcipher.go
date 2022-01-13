@@ -3,15 +3,17 @@ package sqlcipher
 import (
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"strconv"
 	"strings"
 
+	"go.uber.org/atomic"
+
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/hashicorp/go-multierror"
 	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
@@ -202,6 +204,10 @@ func (m *Sqlite) Run(migration io.Reader) error {
 		return m.executeQueryNoTx(query)
 	}
 	return m.executeQuery(query)
+}
+
+func (m *Sqlite) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 func (m *Sqlite) executeQuery(query string) error {
