@@ -178,7 +178,6 @@ func (i *Migrations) UpdateStatus(version uint, status Status, errstr string) {
 func (i *Migrations) PrintSummary(dir Direction) {
 	w := new(tabwriter.Writer)
 	w.Init(os.Stdout, 8, 8, 0, '\t', 0)
-	defer w.Flush()
 	fmt.Fprintf(w, "\n\t\t%s\n\n", "+++++ Migration Summary +++++")
 	fmt.Fprintf(w, "\t%s\t%s\t%s\t\n", "Migration Source", "Status", "Error")
 	fmt.Fprintf(w, "\t%s\t%s\t%s\t\n", "----------------", "------", "-----")
@@ -190,6 +189,9 @@ func (i *Migrations) PrintSummary(dir Direction) {
 	}
 
 	fmt.Fprintf(w, "\t%s\t%s\t%s\t\n", "----------------", "------", "-----")
+	if err := w.Flush(); err != nil {
+		fmt.Printf("error in closing formatter: %v\n", err)
+	}
 }
 
 type uintSlice []uint
