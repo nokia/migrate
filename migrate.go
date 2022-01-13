@@ -286,15 +286,16 @@ func (m *Migrate) Up() error {
 		}
 	}
 
-	m.sourceDrv.PrintSummary(source.Up)
-
 	if dirty {
 		return m.unlockErr(ErrDirty{curVersion})
 	}
 
 	ret := make(chan interface{}, m.PrefetchMigrations)
 	go m.readUp(curVersion, -1, ret)
-	return m.unlockErr(m.runMigrations(ret))
+	m.sourceDrv.PrintSummary(source.Up)
+	err = m.runMigrations(ret)
+	m.sourceDrv.PrintSummary(source.Up)
+	return m.unlockErr(err)
 }
 
 // Down looks at the currently active migration version
