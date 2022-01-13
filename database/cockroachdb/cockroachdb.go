@@ -11,11 +11,11 @@ import (
 	"strconv"
 
 	"github.com/cockroachdb/cockroach-go/v2/crdb"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database"
-	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/hashicorp/go-multierror"
 	"github.com/lib/pq"
+	"github.com/nokia/migrate/v4"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
 	"go.uber.org/atomic"
 )
 
@@ -241,7 +241,7 @@ func (c *CockroachDb) SetVersion(version int, dirty bool) error {
 
 		// Also re-write the schema version for nil dirty versions to prevent
 		// empty schema version for failed down migration on the first migration
-		// See: https://github.com/golang-migrate/migrate/issues/330
+		// See: https://github.com/nokia/migrate/issues/330
 		if version >= 0 || (version == database.NilVersion && dirty) {
 			if _, err := tx.Exec(`INSERT INTO "`+c.config.MigrationsTable+`" (version, dirty) VALUES ($1, $2)`, version, dirty); err != nil {
 				return err

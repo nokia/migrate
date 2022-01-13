@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/stub" // TODO remove again
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/nokia/migrate/v4"
+	_ "github.com/nokia/migrate/v4/database/stub" // TODO remove again
+	_ "github.com/nokia/migrate/v4/source/file"
 )
 
 var (
@@ -85,7 +85,6 @@ func createCmd(dir string, startTime time.Time, format string, name string, ext 
 
 	if seq {
 		matches, err := filepath.Glob(filepath.Join(dir, "*"+ext))
-
 		if err != nil {
 			return err
 		}
@@ -105,7 +104,6 @@ func createCmd(dir string, startTime time.Time, format string, name string, ext 
 
 	versionGlob := filepath.Join(dir, version+"_*"+ext)
 	matches, err := filepath.Glob(versionGlob)
-
 	if err != nil {
 		return err
 	}
@@ -139,7 +137,6 @@ func createFile(filename string) error {
 	// create exclusive (fails if file already exists)
 	// os.Create() specifies 0666 as the FileMode, so we're doing the same
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
-
 	if err != nil {
 		return err
 	}

@@ -9,12 +9,11 @@ import (
 	"os"
 	"strings"
 	"testing"
-)
 
-import (
-	dStub "github.com/golang-migrate/migrate/v4/database/stub"
-	"github.com/golang-migrate/migrate/v4/source"
-	sStub "github.com/golang-migrate/migrate/v4/source/stub"
+	dStub "github.com/nokia/migrate/v4/database/stub"
+	"github.com/nokia/migrate/v4/source"
+
+	sStub "github.com/nokia/migrate/v4/source/stub"
 )
 
 // sourceStubMigrations hold the following migrations:
@@ -117,7 +116,7 @@ func ExampleNewWithDatabaseInstance() {
 
 	// Create driver instance from db.
 	// Check each driver if it supports the WithInstance function.
-	// `import "github.com/golang-migrate/migrate/v4/database/postgres"`
+	// `import "github.com/nokia/migrate/v4/database/postgres"`
 	instance, err := dStub.WithInstance(db, &dStub.Config{})
 	if err != nil {
 		log.Fatal(err)
@@ -167,7 +166,7 @@ func ExampleNewWithSourceInstance() {
 
 	// Create driver instance from DummyInstance di.
 	// Check each driver if it support the WithInstance function.
-	// `import "github.com/golang-migrate/migrate/v4/source/stub"`
+	// `import "github.com/nokia/migrate/v4/source/stub"`
 	instance, err := sStub.WithInstance(di, &sStub.Config{})
 	if err != nil {
 		log.Fatal(err)
@@ -472,7 +471,6 @@ func TestMigrate(t *testing.T) {
 		if (v.expectErr == os.ErrNotExist && !errors.Is(err, os.ErrNotExist)) ||
 			(v.expectErr != os.ErrNotExist && err != v.expectErr) {
 			t.Errorf("expected err %v, got %v, in %v", v.expectErr, err, i)
-
 		} else if err == nil {
 			version, _, err := m.Version()
 			if err != nil {
@@ -527,7 +525,8 @@ func TestSteps(t *testing.T) {
 			steps:         1,
 			expectVersion: 1,
 			expectSeq: migrationSequence{
-				mr("CREATE 1")},
+				mr("CREATE 1"),
+			},
 		},
 		{
 			steps:         1,
@@ -735,7 +734,6 @@ func TestSteps(t *testing.T) {
 		if (v.expectErr == os.ErrNotExist && !errors.Is(err, os.ErrNotExist)) ||
 			(v.expectErr != os.ErrNotExist && err != v.expectErr) {
 			t.Errorf("expected err %v, got %v, in %v", v.expectErr, err, i)
-
 		} else if err == nil {
 			version, _, err := m.Version()
 			if err != ErrNilVersion && err != nil {
@@ -743,7 +741,6 @@ func TestSteps(t *testing.T) {
 			}
 			if v.expectVersion == -1 && err != ErrNilVersion {
 				t.Errorf("expected ErrNilVersion, got %v, in %v", version, i)
-
 			} else if v.expectVersion >= 0 && version != uint(v.expectVersion) {
 				t.Errorf("expected version %v, got %v, in %v", v.expectVersion, version, i)
 			}
@@ -1395,7 +1392,6 @@ func mr(value string) *Migration {
 func equalMigSeq(t *testing.T, i int, expected, got migrationSequence) {
 	if len(expected) != len(got) {
 		t.Errorf("expected migrations %v, got %v, in %v", expected, got, i)
-
 	} else {
 		for ii := 0; ii < len(expected); ii++ {
 			if expected[ii].Version != got[ii].Version {

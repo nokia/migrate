@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/golang-migrate/migrate/v4/database/multistmt"
+	"github.com/nokia/migrate/v4/database/multistmt"
 )
 
 const maxMigrationSize = 1024
@@ -19,14 +19,22 @@ func TestParse(t *testing.T) {
 		expected    []string
 		expectedErr error
 	}{
-		{name: "single statement, no delimiter", multiStmt: "single statement, no delimiter", delimiter: ";",
-			expected: []string{"single statement, no delimiter"}, expectedErr: nil},
-		{name: "single statement, one delimiter", multiStmt: "single statement, one delimiter;", delimiter: ";",
-			expected: []string{"single statement, one delimiter;"}, expectedErr: nil},
-		{name: "two statements, no trailing delimiter", multiStmt: "statement one; statement two", delimiter: ";",
-			expected: []string{"statement one;", " statement two"}, expectedErr: nil},
-		{name: "two statements, with trailing delimiter", multiStmt: "statement one; statement two;", delimiter: ";",
-			expected: []string{"statement one;", " statement two;"}, expectedErr: nil},
+		{
+			name: "single statement, no delimiter", multiStmt: "single statement, no delimiter", delimiter: ";",
+			expected: []string{"single statement, no delimiter"}, expectedErr: nil,
+		},
+		{
+			name: "single statement, one delimiter", multiStmt: "single statement, one delimiter;", delimiter: ";",
+			expected: []string{"single statement, one delimiter;"}, expectedErr: nil,
+		},
+		{
+			name: "two statements, no trailing delimiter", multiStmt: "statement one; statement two", delimiter: ";",
+			expected: []string{"statement one;", " statement two"}, expectedErr: nil,
+		},
+		{
+			name: "two statements, with trailing delimiter", multiStmt: "statement one; statement two;", delimiter: ";",
+			expected: []string{"statement one;", " statement two;"}, expectedErr: nil,
+		},
 	}
 
 	for _, tc := range testCases {

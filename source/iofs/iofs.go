@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/nokia/migrate/v4/source"
 )
 
 type driver struct {

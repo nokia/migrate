@@ -10,11 +10,11 @@ import (
 
 	_ "github.com/ClickHouse/clickhouse-go"
 	"github.com/dhui/dktest"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/clickhouse"
-	dt "github.com/golang-migrate/migrate/v4/database/testing"
-	"github.com/golang-migrate/migrate/v4/dktesting"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/nokia/migrate/v4"
+	"github.com/nokia/migrate/v4/database/clickhouse"
+	dt "github.com/nokia/migrate/v4/database/testing"
+	"github.com/nokia/migrate/v4/dktesting"
+	_ "github.com/nokia/migrate/v4/source/file"
 )
 
 const defaultPort = 9000
@@ -49,7 +49,6 @@ func isReady(ctx context.Context, c dktest.ContainerInfo) bool {
 	}
 
 	db, err := sql.Open("clickhouse", clickhouseConnectionString(ip, port, ""))
-
 	if err != nil {
 		log.Println("open error", err)
 		return false
@@ -152,7 +151,6 @@ func testMigrate(t *testing.T, engine string) {
 			}
 		}()
 		m, err := migrate.NewWithDatabaseInstance("file://./examples/migrations", "db", d)
-
 		if err != nil {
 			t.Fatal(err)
 		}

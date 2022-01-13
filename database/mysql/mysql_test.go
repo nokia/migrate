@@ -17,19 +17,16 @@ import (
 	"os"
 	"strconv"
 	"testing"
-)
 
-import (
 	"github.com/dhui/dktest"
 	"github.com/go-sql-driver/mysql"
+	"github.com/nokia/migrate/v4"
 	"github.com/stretchr/testify/assert"
-)
 
-import (
-	"github.com/golang-migrate/migrate/v4"
-	dt "github.com/golang-migrate/migrate/v4/database/testing"
-	"github.com/golang-migrate/migrate/v4/dktesting"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	dt "github.com/nokia/migrate/v4/database/testing"
+	"github.com/nokia/migrate/v4/dktesting"
+
+	_ "github.com/nokia/migrate/v4/source/file"
 )
 
 const defaultPort = 3306
@@ -382,34 +379,52 @@ func TestURLToMySQLConfig(t *testing.T) {
 		urlStr      string
 		expectedDSN string // empty string signifies that an error is expected
 	}{
-		{name: "no user/password", urlStr: "mysql://tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "only user", urlStr: "mysql://username@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "username@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "only user - with encoded :",
+		{
+			name: "no user/password", urlStr: "mysql://tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+			expectedDSN: "tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
+		{
+			name: "only user", urlStr: "mysql://username@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+			expectedDSN: "username@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
+		{
+			name:        "only user - with encoded :",
 			urlStr:      "mysql://username%3A@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "username:@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "only user - with encoded @",
+			expectedDSN: "username:@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
+		{
+			name:        "only user - with encoded @",
 			urlStr:      "mysql://username%40@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "username@@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "user/password", urlStr: "mysql://username:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "username:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
+			expectedDSN: "username@@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
+		{
+			name: "user/password", urlStr: "mysql://username:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+			expectedDSN: "username:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
 		// Not supported yet: https://github.com/go-sql-driver/mysql/issues/591
 		// {name: "user/password - user with encoded :",
 		// 	urlStr:      "mysql://username%3A:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
 		// 	expectedDSN: "username::pasword@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "user/password - user with encoded @",
+		{
+			name:        "user/password - user with encoded @",
 			urlStr:      "mysql://username%40:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "username@:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "user/password - password with encoded :",
+			expectedDSN: "username@:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
+		{
+			name:        "user/password - password with encoded :",
 			urlStr:      "mysql://username:password%3A@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "username:password:@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "user/password - password with encoded @",
+			expectedDSN: "username:password:@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
+		{
+			name:        "user/password - password with encoded @",
 			urlStr:      "mysql://username:password%40@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
-			expectedDSN: "username:password@@tcp(127.0.0.1:3306)/myDB?multiStatements=true"},
-		{name: "custom tls",
+			expectedDSN: "username:password@@tcp(127.0.0.1:3306)/myDB?multiStatements=true",
+		},
+		{
+			name:        "custom tls",
 			urlStr:      "mysql://username:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true&tls=custom&x-tls-ca=" + tmpCertFilenameEscaped,
-			expectedDSN: "username:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true&tls=custom&x-tls-ca=" + tmpCertFilenameEscaped},
+			expectedDSN: "username:password@tcp(127.0.0.1:3306)/myDB?multiStatements=true&tls=custom&x-tls-ca=" + tmpCertFilenameEscaped,
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

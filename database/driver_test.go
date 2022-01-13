@@ -4,7 +4,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/nokia/migrate/v4/source"
 )
 
 func ExampleDriver() {

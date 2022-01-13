@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang-migrate/migrate/v4/source"
-	"github.com/golang-migrate/migrate/v4/source/httpfs"
-	st "github.com/golang-migrate/migrate/v4/source/testing"
+	"github.com/nokia/migrate/v4/source"
+	"github.com/nokia/migrate/v4/source/httpfs"
+	st "github.com/nokia/migrate/v4/source/testing"
 )
 
 type driver struct{ httpfs.PartialDriver }
@@ -90,7 +90,6 @@ func TestPartialDriverInit(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestFirstWithNoMigrations(t *testing.T) {
