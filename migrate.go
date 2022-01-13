@@ -1029,10 +1029,6 @@ func (m *Migrate) logErr(err error) {
 	}
 }
 
-func (m *Migrate) PrintSummary(dir source.Direction) {
-	m.sourceDrv.PrintSummary(dir)
-}
-
 func (m *Migrate) GetDBDriver() database.Driver {
 	return m.databaseDrv
 }
