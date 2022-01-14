@@ -1,12 +1,14 @@
 package stub
 
 import (
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	"reflect"
 
-	"github.com/golang-migrate/migrate/v4/database"
+	"go.uber.org/atomic"
+
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
 )
 
 func init() {
@@ -71,6 +73,10 @@ func (s *Stub) Run(migration io.Reader) error {
 	s.LastRunMigration = m
 	s.MigrationSequence = append(s.MigrationSequence, string(m[:]))
 	return nil
+}
+
+func (s *Stub) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 func (s *Stub) SetVersion(version int, state bool) error {

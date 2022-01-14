@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/nokia/migrate/v4/source"
 )
 
 type AssetFunc func(name string) ([]byte, error)
@@ -38,9 +38,7 @@ func (b *Bindata) Open(url string) (source.Driver, error) {
 	return nil, fmt.Errorf("not yet implemented")
 }
 
-var (
-	ErrNoAssetSource = fmt.Errorf("expects *AssetSource")
-)
+var ErrNoAssetSource = fmt.Errorf("expects *AssetSource")
 
 func WithInstance(instance interface{}) (source.Driver, error) {
 	if _, ok := instance.(*AssetSource); !ok {
@@ -96,24 +94,36 @@ func (b *Bindata) Next(version uint) (nextVersion uint, err error) {
 	}
 }
 
-func (b *Bindata) ReadUp(version uint) (r io.ReadCloser, identifier string, err error) {
+func (b *Bindata) ReadUp(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	if m, ok := b.migrations.Up(version); ok {
 		body, err := b.assetSource.AssetFunc(m.Raw)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
-		return ioutil.NopCloser(bytes.NewReader(body)), m.Identifier, nil
+		return ioutil.NopCloser(bytes.NewReader(body)), m.Identifier, m.Raw, nil, nil
 	}
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.path, Err: os.ErrNotExist}
 }
 
-func (b *Bindata) ReadDown(version uint) (r io.ReadCloser, identifier string, err error) {
+func (b *Bindata) ReadDown(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	if m, ok := b.migrations.Down(version); ok {
 		body, err := b.assetSource.AssetFunc(m.Raw)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
-		return ioutil.NopCloser(bytes.NewReader(body)), m.Identifier, nil
+		return ioutil.NopCloser(bytes.NewReader(body)), m.Identifier, m.Raw, nil, nil
 	}
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.path, Err: os.ErrNotExist}
+}
+
+func (b *Bindata) MarkSkipMigrations(version uint, dir source.Direction) {
+	b.migrations.MarkSkipMigrations(version, dir)
+}
+
+func (b *Bindata) UpdateStatus(version uint, status source.Status, errstr string) {
+	b.migrations.UpdateStatus(version, status, errstr)
+}
+
+func (b *Bindata) PrintSummary(dir source.Direction) {
+	b.migrations.PrintSummary(dir)
 }

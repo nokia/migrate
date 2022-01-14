@@ -11,16 +11,18 @@ import (
 	"time"
 
 	"github.com/dhui/dktest"
-	"github.com/golang-migrate/migrate/v4"
+	"github.com/nokia/migrate/v4"
 
-	dt "github.com/golang-migrate/migrate/v4/database/testing"
-	"github.com/golang-migrate/migrate/v4/dktesting"
+	dt "github.com/nokia/migrate/v4/database/testing"
+	"github.com/nokia/migrate/v4/dktesting"
 
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/nokia/migrate/v4/source/file"
 )
 
-const defaultPort = 1433
-const saPassword = "Root1234"
+const (
+	defaultPort = 1433
+	saPassword  = "Root1234"
+)
 
 var (
 	opts = dktest.Options{

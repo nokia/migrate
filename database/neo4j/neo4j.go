@@ -9,10 +9,11 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/golang-migrate/migrate/v4/database"
-	"github.com/golang-migrate/migrate/v4/database/multistmt"
 	"github.com/hashicorp/go-multierror"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/database/multistmt"
+	"github.com/nokia/migrate/v4/source"
 )
 
 func init() {
@@ -27,9 +28,7 @@ var (
 	DefaultMultiStatementMaxSize = 10 * 1 << 20 // 10 MB
 )
 
-var (
-	ErrNilConfig = fmt.Errorf("no config")
-)
+var ErrNilConfig = fmt.Errorf("no config")
 
 type Config struct {
 	MigrationsLabel       string
@@ -180,6 +179,10 @@ func (n *Neo4j) Run(migration io.Reader) (err error) {
 
 	_, err = neo4j.Collect(session.Run(string(body[:]), nil))
 	return err
+}
+
+func (n *Neo4j) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
 }
 
 func (n *Neo4j) SetVersion(version int, dirty bool) (err error) {

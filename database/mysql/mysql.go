@@ -9,16 +9,18 @@ import (
 	"crypto/x509"
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"strconv"
 	"strings"
 
+	"go.uber.org/atomic"
+
 	"github.com/go-sql-driver/mysql"
-	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/hashicorp/go-multierror"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
 )
 
 var _ database.Driver = (*Mysql)(nil) // explicit compile time type check
@@ -138,7 +140,7 @@ func urlToMySQLConfig(url string) (*mysql.Config, error) {
 	// Need to parse out custom TLS parameters and call
 	// mysql.RegisterTLSConfig() before mysql.ParseDSN() is called
 	// which consumes the registered tls.Config
-	// Fixes: https://github.com/golang-migrate/migrate/issues/411
+	// Fixes: https://github.com/nokia/migrate/issues/411
 	//
 	// Can't use url.Parse() since it fails to parse MySQL DSNs
 	// mysql.ParseDSN() also searches for "?" to find query parameters:
@@ -335,6 +337,10 @@ func (m *Mysql) Run(migration io.Reader) error {
 	return nil
 }
 
+func (m *Mysql) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func (m *Mysql) SetVersion(version int, dirty bool) error {
 	tx, err := m.conn.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -351,7 +357,7 @@ func (m *Mysql) SetVersion(version int, dirty bool) error {
 
 	// Also re-write the schema version for nil dirty versions to prevent
 	// empty schema version for failed down migration on the first migration
-	// See: https://github.com/golang-migrate/migrate/issues/330
+	// See: https://github.com/nokia/migrate/issues/330
 	if version >= 0 || (version == database.NilVersion && dirty) {
 		query := "INSERT INTO `" + m.config.MigrationsTable + "` (version, dirty) VALUES (?, ?)"
 		if _, err := tx.ExecContext(context.Background(), query, version, dirty); err != nil {

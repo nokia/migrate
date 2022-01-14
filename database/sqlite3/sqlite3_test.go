@@ -10,10 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/golang-migrate/migrate/v4"
-	dt "github.com/golang-migrate/migrate/v4/database/testing"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/nokia/migrate/v4"
+	dt "github.com/nokia/migrate/v4/database/testing"
+	_ "github.com/nokia/migrate/v4/source/file"
 )
 
 func Test(t *testing.T) {

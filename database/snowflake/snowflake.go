@@ -4,16 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"strconv"
 	"strings"
 
-	"github.com/golang-migrate/migrate/v4/database"
+	"go.uber.org/atomic"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/lib/pq"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
 	sf "github.com/snowflakedb/gosnowflake"
 )
 
@@ -74,7 +76,6 @@ func WithInstance(instance *sql.DB, config *Config) (database.Driver, error) {
 	}
 
 	conn, err := instance.Conn(context.Background())
-
 	if err != nil {
 		return nil, err
 	}
@@ -205,6 +206,10 @@ func (p *Snowflake) Run(migration io.Reader) error {
 	return nil
 }
 
+func (p *Snowflake) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func computeLineFromPos(s string, pos int) (line uint, col uint, ok bool) {
 	// replace crlf with lf
 	s = strings.Replace(s, "\r\n", "\n", -1)
@@ -256,7 +261,7 @@ func (p *Snowflake) SetVersion(version int, dirty bool) error {
 
 	// Also re-write the schema version for nil dirty versions to prevent
 	// empty schema version for failed down migration on the first migration
-	// See: https://github.com/golang-migrate/migrate/issues/330
+	// See: https://github.com/nokia/migrate/issues/330
 	if version >= 0 || (version == database.NilVersion && dirty) {
 		query = `INSERT INTO "` + p.config.MigrationsTable + `" (version,
 				dirty) VALUES (` + strconv.FormatInt(int64(version), 10) + `,

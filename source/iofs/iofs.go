@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"path"
+	"path/filepath"
 	"strconv"
 
-	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/nokia/migrate/v4/source"
 )
 
 type driver struct {
@@ -48,30 +48,32 @@ type PartialDriver struct {
 // Init prepares not initialized IoFS instance to read migrations from a
 // io/fs#FS instance and a relative path.
 func (d *PartialDriver) Init(fsys fs.FS, path string) error {
-	entries, err := fs.ReadDir(fsys, path)
-	if err != nil {
-		return err
-	}
-
 	ms := source.NewMigrations()
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		m, err := source.DefaultParse(e.Name())
-		if err != nil {
-			continue
-		}
-		file, err := e.Info()
-		if err != nil {
-			return err
-		}
-		if !ms.Append(m) {
-			return source.ErrDuplicateMigration{
-				Migration: *m,
-				FileInfo:  file,
+	// Read all migrations recursively.
+	err := fs.WalkDir(fsys, path, func(path string, e fs.DirEntry, err error) error {
+		if !e.IsDir() {
+			m, err := source.DefaultParse(e.Name())
+			if err != nil {
+				return nil // ignore parse errors,
+			}
+			// set relative path
+			m.Raw = path
+			file, err := e.Info()
+			if err != nil {
+				return err
+			}
+
+			if !ms.Append(m) {
+				return source.ErrDuplicateMigration{
+					Migration: *m,
+					FileInfo:  file,
+				}
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	d.fsys = fsys
@@ -127,15 +129,21 @@ func (d *PartialDriver) Next(version uint) (nextVersion uint, err error) {
 }
 
 // ReadUp is part of source.Driver interface implementation.
-func (d *PartialDriver) ReadUp(version uint) (r io.ReadCloser, identifier string, err error) {
+func (d *PartialDriver) ReadUp(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	if m, ok := d.migrations.Up(version); ok {
-		body, err := d.open(path.Join(d.path, m.Raw))
-		if err != nil {
-			return nil, "", err
+		// read if migration function registered with this file
+		basename := filepath.Base(m.Raw)
+		if fn, ok := source.MgrFunctions[basename]; ok {
+			return nil, m.Identifier, m.Raw, fn, nil
 		}
-		return body, m.Identifier, nil
+		// read content of file and return
+		body, err := d.open(m.Raw)
+		if err != nil {
+			return nil, "", "", nil, err
+		}
+		return body, m.Identifier, m.Raw, nil, nil
 	}
-	return nil, "", &fs.PathError{
+	return nil, "", "", nil, &fs.PathError{
 		Op:   "read up for version " + strconv.FormatUint(uint64(version), 10),
 		Path: d.path,
 		Err:  fs.ErrNotExist,
@@ -143,15 +151,21 @@ func (d *PartialDriver) ReadUp(version uint) (r io.ReadCloser, identifier string
 }
 
 // ReadDown is part of source.Driver interface implementation.
-func (d *PartialDriver) ReadDown(version uint) (r io.ReadCloser, identifier string, err error) {
+func (d *PartialDriver) ReadDown(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	if m, ok := d.migrations.Down(version); ok {
-		body, err := d.open(path.Join(d.path, m.Raw))
-		if err != nil {
-			return nil, "", err
+		// read if migration function registered with this file
+		basename := filepath.Base(m.Raw)
+		if fn, ok := source.MgrFunctions[basename]; ok {
+			return nil, m.Identifier, m.Raw, fn, nil
 		}
-		return body, m.Identifier, nil
+		// read content of file and return
+		body, err := d.open(m.Raw)
+		if err != nil {
+			return nil, "", "", nil, err
+		}
+		return body, m.Identifier, m.Raw, nil, nil
 	}
-	return nil, "", &fs.PathError{
+	return nil, "", "", nil, &fs.PathError{
 		Op:   "read down for version " + strconv.FormatUint(uint64(version), 10),
 		Path: d.path,
 		Err:  fs.ErrNotExist,
@@ -173,4 +187,16 @@ func (d *PartialDriver) open(path string) (fs.File, error) {
 		}
 	}
 	return nil, err
+}
+
+func (d *PartialDriver) MarkSkipMigrations(version uint, dir source.Direction) {
+	d.migrations.MarkSkipMigrations(version, dir)
+}
+
+func (d *PartialDriver) UpdateStatus(version uint, status source.Status, errstr string) {
+	d.migrations.UpdateStatus(version, status, errstr)
+}
+
+func (d *PartialDriver) PrintSummary(dir source.Direction) {
+	d.migrations.PrintSummary(dir)
 }

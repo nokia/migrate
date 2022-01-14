@@ -3,20 +3,22 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
-	"github.com/golang-migrate/migrate/v4/database"
-	"github.com/hashicorp/go-multierror"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	"net/url"
 	os "os"
 	"strconv"
 	"time"
+
+	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/go-multierror"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+	"go.uber.org/atomic"
 )
 
 func init() {
@@ -27,13 +29,15 @@ func init() {
 
 var DefaultMigrationsCollection = "schema_migrations"
 
-const DefaultLockingCollection = "migrate_advisory_lock" // the collection to use for advisory locking by default.
-const lockKeyUniqueValue = 0                             // the unique value to lock on. If multiple clients try to insert the same key, it will fail (locked).
-const DefaultLockTimeout = 15                            // the default maximum time to wait for a lock to be released.
-const DefaultLockTimeoutInterval = 10                    // the default maximum intervals time for the locking timout.
-const DefaultAdvisoryLockingFlag = true                  // the default value for the advisory locking feature flag. Default is true.
-const LockIndexName = "lock_unique_key"                  // the name of the index which adds unique constraint to the locking_key field.
-const contextWaitTimeout = 5 * time.Second               // how long to wait for the request to mongo to block/wait for.
+const (
+	DefaultLockingCollection   = "migrate_advisory_lock" // the collection to use for advisory locking by default.
+	lockKeyUniqueValue         = 0                       // the unique value to lock on. If multiple clients try to insert the same key, it will fail (locked).
+	DefaultLockTimeout         = 15                      // the default maximum time to wait for a lock to be released.
+	DefaultLockTimeoutInterval = 10                      // the default maximum intervals time for the locking timout.
+	DefaultAdvisoryLockingFlag = true                    // the default value for the advisory locking feature flag. Default is true.
+	LockIndexName              = "lock_unique_key"       // the name of the index which adds unique constraint to the locking_key field.
+	contextWaitTimeout         = 5 * time.Second         // how long to wait for the request to mongo to block/wait for.
+)
 
 var (
 	ErrNoDatabaseName            = fmt.Errorf("no database name")
@@ -54,12 +58,14 @@ type Locking struct {
 	Enabled        bool
 	Interval       int
 }
+
 type Config struct {
 	DatabaseName         string
 	MigrationsCollection string
 	TransactionMode      bool
 	Locking              Locking
 }
+
 type versionInfo struct {
 	Version int  `bson:"version"`
 	Dirty   bool `bson:"dirty"`
@@ -71,6 +77,7 @@ type lockObj struct {
 	Hostname  string    `bson:"hostname"`
 	CreatedAt time.Time `bson:"created_at"`
 }
+
 type findFilter struct {
 	Key int `bson:"locking_key"`
 }
@@ -114,7 +121,7 @@ func WithInstance(instance *mongo.Client, config *Config) (database.Driver, erro
 }
 
 func (m *Mongo) Open(dsn string) (database.Driver, error) {
-	//connstring is experimental package, but it used for parse connection string in mongo.Connect function
+	// connstring is experimental package, but it used for parse connection string in mongo.Connect function
 	uri, err := connstring.Parse(dsn)
 	if err != nil {
 		return nil, err
@@ -153,7 +160,6 @@ func (m *Mongo) Open(dsn string) (database.Driver, error) {
 	}
 
 	maxLockCheckInterval, err := parseInt(lockTimeout, DefaultLockTimeoutInterval)
-
 	if err != nil {
 		return nil, err
 	}
@@ -182,10 +188,9 @@ func (m *Mongo) Open(dsn string) (database.Driver, error) {
 	return mc, nil
 }
 
-//Parse the url param, convert it to boolean
+// Parse the url param, convert it to boolean
 // returns error if param invalid. returns defaultValue if param not present
 func parseBoolean(urlParam string, defaultValue bool) (bool, error) {
-
 	// if parameter passed, parse it (otherwise return default value)
 	if urlParam != "" {
 		result, err := strconv.ParseBool(urlParam)
@@ -199,10 +204,9 @@ func parseBoolean(urlParam string, defaultValue bool) (bool, error) {
 	return defaultValue, nil
 }
 
-//Parse the url param, convert it to int
+// Parse the url param, convert it to int
 // returns error if param invalid. returns defaultValue if param not present
 func parseInt(urlParam string, defaultValue int) (int, error) {
-
 	// if parameter passed, parse it (otherwise return default value)
 	if urlParam != "" {
 		result, err := strconv.Atoi(urlParam)
@@ -215,6 +219,7 @@ func parseInt(urlParam string, defaultValue int) (int, error) {
 	// if no url Param passed, return default value
 	return defaultValue, nil
 }
+
 func (m *Mongo) SetVersion(version int, dirty bool) error {
 	migrationsCollection := m.db.Collection(m.config.MigrationsCollection)
 	if err := migrationsCollection.Drop(context.TODO()); err != nil {
@@ -262,14 +267,27 @@ func (m *Mongo) Run(migration io.Reader) error {
 	return nil
 }
 
+func (m *Mongo) RunFunctionMigration(fn source.MigrationFunc) error {
+	if m.config.TransactionMode {
+		if err := m.executeFunctionWithTransaction(context.TODO(), fn); err != nil {
+			return err
+		}
+	} else {
+		if err := m.executeFunction(context.TODO(), fn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *Mongo) executeCommandsWithTransaction(ctx context.Context, cmds []bson.D) error {
 	err := m.db.Client().UseSession(ctx, func(sessionContext mongo.SessionContext) error {
 		if err := sessionContext.StartTransaction(); err != nil {
 			return &database.Error{OrigErr: err, Err: "failed to start transaction"}
 		}
 		if err := m.executeCommands(sessionContext, cmds); err != nil {
-			//When command execution is failed, it's aborting transaction
-			//If you tried to call abortTransaction, it`s return error that transaction already aborted
+			// When command execution is failed, it's aborting transaction
+			// If you tried to call abortTransaction, it`s return error that transaction already aborted
 			return err
 		}
 		if err := sessionContext.CommitTransaction(sessionContext); err != nil {
@@ -289,6 +307,34 @@ func (m *Mongo) executeCommands(ctx context.Context, cmds []bson.D) error {
 		if err != nil {
 			return &database.Error{OrigErr: err, Err: fmt.Sprintf("failed to execute command:%v", cmd)}
 		}
+	}
+	return nil
+}
+
+func (m *Mongo) executeFunctionWithTransaction(ctx context.Context, fn source.MigrationFunc) error {
+	err := m.db.Client().UseSession(ctx, func(sessionContext mongo.SessionContext) error {
+		if err := sessionContext.StartTransaction(); err != nil {
+			return &database.Error{OrigErr: err, Err: "failed to start transaction"}
+		}
+		if err := m.executeFunction(sessionContext, fn); err != nil {
+			// When Function execution is failed, it's aborting transaction
+			// If you tried to call abortTransaction, it`s return error that transaction already aborted
+			return err
+		}
+		if err := sessionContext.CommitTransaction(sessionContext); err != nil {
+			return &database.Error{OrigErr: err, Err: "failed to commit transaction"}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Mongo) executeFunction(ctx context.Context, fn source.MigrationFunc) error {
+	if err := fn(ctx, m.db); err != nil {
+		return &database.Error{OrigErr: err, Err: "failed to execute function: migration"}
 	}
 	return nil
 }
@@ -401,4 +447,12 @@ func (m *Mongo) Unlock() error {
 		}
 		return nil
 	})
+}
+
+func (m *Mongo) GetClient() *mongo.Client {
+	return m.client
+}
+
+func (m *Mongo) GetDatabase() *mongo.Database {
+	return m.db
 }

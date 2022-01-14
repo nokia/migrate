@@ -8,24 +8,20 @@ import (
 	"database/sql"
 	sqldriver "database/sql/driver"
 	"fmt"
-	"log"
-
-	"github.com/golang-migrate/migrate/v4"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 	"testing"
-)
 
-import (
 	"github.com/dhui/dktest"
-)
+	"github.com/nokia/migrate/v4"
+	"github.com/nokia/migrate/v4/database"
 
-import (
-	"github.com/golang-migrate/migrate/v4/database"
-	dt "github.com/golang-migrate/migrate/v4/database/testing"
-	"github.com/golang-migrate/migrate/v4/dktesting"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	dt "github.com/nokia/migrate/v4/database/testing"
+	"github.com/nokia/migrate/v4/dktesting"
+
+	_ "github.com/nokia/migrate/v4/source/file"
 )
 
 var (
@@ -276,7 +272,6 @@ func TestWithSchema(t *testing.T) {
 }
 
 func TestWithInstance(t *testing.T) {
-
 }
 
 func TestRedshift_Lock(t *testing.T) {
@@ -397,5 +392,4 @@ func Test_computeLineFromPos(t *testing.T) {
 			run(true, true)
 		})
 	}
-
 }

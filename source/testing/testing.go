@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/nokia/migrate/v4/source"
 )
 
 // Test runs tests against source implementations.
@@ -113,11 +113,10 @@ func TestReadUp(t *testing.T, d source.Driver) {
 	}
 
 	for i, v := range tt {
-		up, identifier, err := d.ReadUp(v.version)
+		up, identifier, _, _, err := d.ReadUp(v.version)
 		if (v.expectErr == os.ErrNotExist && !errors.Is(err, os.ErrNotExist)) ||
 			(v.expectErr != os.ErrNotExist && err != v.expectErr) {
 			t.Errorf("expected %v, got %v, in %v", v.expectErr, err, i)
-
 		} else if err == nil {
 			if len(identifier) == 0 {
 				t.Errorf("expected identifier not to be empty, in %v", i)
@@ -155,11 +154,10 @@ func TestReadDown(t *testing.T, d source.Driver) {
 	}
 
 	for i, v := range tt {
-		down, identifier, err := d.ReadDown(v.version)
+		down, identifier, _, _, err := d.ReadDown(v.version)
 		if (v.expectErr == os.ErrNotExist && !errors.Is(err, os.ErrNotExist)) ||
 			(v.expectErr != os.ErrNotExist && err != v.expectErr) {
 			t.Errorf("expected %v, got %v, in %v", v.expectErr, err, i)
-
 		} else if err == nil {
 			if len(identifier) == 0 {
 				t.Errorf("expected identifier not to be empty, in %v", i)

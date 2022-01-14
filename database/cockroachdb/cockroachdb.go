@@ -4,23 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"regexp"
 	"strconv"
-)
 
-import (
 	"github.com/cockroachdb/cockroach-go/v2/crdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/lib/pq"
-)
-
-import (
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/nokia/migrate/v4"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
+	"go.uber.org/atomic"
 )
 
 func init() {
@@ -30,8 +26,10 @@ func init() {
 	database.Register("crdb-postgres", &db)
 }
 
-var DefaultMigrationsTable = "schema_migrations"
-var DefaultLockTable = "schema_lock"
+var (
+	DefaultMigrationsTable = "schema_migrations"
+	DefaultLockTable       = "schema_lock"
+)
 
 var (
 	ErrNilConfig      = fmt.Errorf("no config")
@@ -231,6 +229,10 @@ func (c *CockroachDb) Run(migration io.Reader) error {
 	return nil
 }
 
+func (c *CockroachDb) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func (c *CockroachDb) SetVersion(version int, dirty bool) error {
 	return crdb.ExecuteTx(context.Background(), c.db, nil, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`DELETE FROM "` + c.config.MigrationsTable + `"`); err != nil {
@@ -239,7 +241,7 @@ func (c *CockroachDb) SetVersion(version int, dirty bool) error {
 
 		// Also re-write the schema version for nil dirty versions to prevent
 		// empty schema version for failed down migration on the first migration
-		// See: https://github.com/golang-migrate/migrate/issues/330
+		// See: https://github.com/nokia/migrate/issues/330
 		if version >= 0 || (version == database.NilVersion && dirty) {
 			if _, err := tx.Exec(`INSERT INTO "`+c.config.MigrationsTable+`" (version, dirty) VALUES ($1, $2)`, version, dirty); err != nil {
 				return err

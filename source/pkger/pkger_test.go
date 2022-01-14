@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/gobuffalo/here"
-	st "github.com/golang-migrate/migrate/v4/source/testing"
 	"github.com/markbates/pkger"
 	"github.com/markbates/pkger/pkging"
 	"github.com/markbates/pkger/pkging/mem"
+	st "github.com/nokia/migrate/v4/source/testing"
 )
 
 func Test(t *testing.T) {
@@ -54,7 +54,6 @@ func Test(t *testing.T) {
 
 		st.Test(t, d)
 	})
-
 }
 
 func TestWithInstance(t *testing.T) {
@@ -100,12 +99,10 @@ func TestWithInstance(t *testing.T) {
 		if _, err := d.First(); !errors.Is(err, os.ErrNotExist) {
 			t.Fatal(err)
 		}
-
 	})
 }
 
 func TestOpen(t *testing.T) {
-
 	t.Run("InvalidURL", func(t *testing.T) {
 		_, err := (&Pkger{}).Open(":///")
 		if err == nil {

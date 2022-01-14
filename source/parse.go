@@ -6,9 +6,7 @@ import (
 	"strconv"
 )
 
-var (
-	ErrParse = fmt.Errorf("no match")
-)
+var ErrParse = fmt.Errorf("no match")
 
 var (
 	DefaultParse = Parse
@@ -33,6 +31,7 @@ func Parse(raw string) (*Migration, error) {
 			Identifier: m[2],
 			Direction:  Direction(m[3]),
 			Raw:        raw,
+			Status:     Pending,
 		}, nil
 	}
 	return nil, ErrParse

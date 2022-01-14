@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/ktrysmt/go-bitbucket"
+	"github.com/nokia/migrate/v4/source"
 )
 
 func init() {
@@ -102,7 +102,6 @@ func (b *Bitbucket) readDirectory() error {
 	}
 
 	dirContents, err := b.client.Repositories.Repository.ListFiles(fOpt)
-
 	if err != nil {
 		return err
 	}
@@ -161,7 +160,7 @@ func (b *Bitbucket) Next(version uint) (nextVersion uint, err error) {
 	}
 }
 
-func (b *Bitbucket) ReadUp(version uint) (r io.ReadCloser, identifier string, err error) {
+func (b *Bitbucket) ReadUp(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	b.ensureFields()
 
 	if m, ok := b.migrations.Up(version); ok {
@@ -173,17 +172,17 @@ func (b *Bitbucket) ReadUp(version uint) (r io.ReadCloser, identifier string, er
 		}
 		file, err := b.client.Repositories.Repository.GetFileBlob(fBlobOpt)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 		if file != nil {
 			r := file.Content
-			return ioutil.NopCloser(strings.NewReader(string(r))), m.Identifier, nil
+			return ioutil.NopCloser(strings.NewReader(string(r))), m.Identifier, m.Raw, nil, nil
 		}
 	}
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.config.Path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.config.Path, Err: os.ErrNotExist}
 }
 
-func (b *Bitbucket) ReadDown(version uint) (r io.ReadCloser, identifier string, err error) {
+func (b *Bitbucket) ReadDown(version uint) (r io.ReadCloser, identifier string, location string, fn source.MigrationFunc, err error) {
 	b.ensureFields()
 
 	if m, ok := b.migrations.Down(version); ok {
@@ -194,15 +193,26 @@ func (b *Bitbucket) ReadDown(version uint) (r io.ReadCloser, identifier string, 
 			Path:     path.Join(b.config.Path, m.Raw),
 		}
 		file, err := b.client.Repositories.Repository.GetFileBlob(fBlobOpt)
-
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", nil, err
 		}
 		if file != nil {
 			r := file.Content
 
-			return ioutil.NopCloser(strings.NewReader(string(r))), m.Identifier, nil
+			return ioutil.NopCloser(strings.NewReader(string(r))), m.Identifier, m.Raw, nil, nil
 		}
 	}
-	return nil, "", &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.config.Path, Err: os.ErrNotExist}
+	return nil, "", "", nil, &os.PathError{Op: fmt.Sprintf("read version %v", version), Path: b.config.Path, Err: os.ErrNotExist}
+}
+
+func (b *Bitbucket) MarkSkipMigrations(version uint, dir source.Direction) {
+	b.migrations.MarkSkipMigrations(version, dir)
+}
+
+func (b *Bitbucket) UpdateStatus(version uint, status source.Status, errstr string) {
+	b.migrations.UpdateStatus(version, status, errstr)
+}
+
+func (b *Bitbucket) PrintSummary(dir source.Direction) {
+	b.migrations.PrintSummary(dir)
 }

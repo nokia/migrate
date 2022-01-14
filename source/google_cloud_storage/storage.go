@@ -1,6 +1,7 @@
 package googlecloudstorage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -9,8 +10,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"context"
-	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/nokia/migrate/v4/source"
 	"google.golang.org/api/iterator"
 )
 
@@ -95,25 +95,37 @@ func (g *gcs) Next(version uint) (uint, error) {
 	return v, nil
 }
 
-func (g *gcs) ReadUp(version uint) (io.ReadCloser, string, error) {
+func (g *gcs) ReadUp(version uint) (io.ReadCloser, string, string, source.MigrationFunc, error) {
 	if m, ok := g.migrations.Up(version); ok {
 		return g.open(m)
 	}
-	return nil, "", os.ErrNotExist
+	return nil, "", "", nil, os.ErrNotExist
 }
 
-func (g *gcs) ReadDown(version uint) (io.ReadCloser, string, error) {
+func (g *gcs) ReadDown(version uint) (io.ReadCloser, string, string, source.MigrationFunc, error) {
 	if m, ok := g.migrations.Down(version); ok {
 		return g.open(m)
 	}
-	return nil, "", os.ErrNotExist
+	return nil, "", "", nil, os.ErrNotExist
 }
 
-func (g *gcs) open(m *source.Migration) (io.ReadCloser, string, error) {
+func (g *gcs) open(m *source.Migration) (io.ReadCloser, string, string, source.MigrationFunc, error) {
 	objectPath := path.Join(g.prefix, m.Raw)
 	reader, err := g.bucket.Object(objectPath).NewReader(context.Background())
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", nil, err
 	}
-	return reader, m.Identifier, nil
+	return reader, m.Identifier, m.Raw, nil, nil
+}
+
+func (g *gcs) MarkSkipMigrations(version uint, dir source.Direction) {
+	g.migrations.MarkSkipMigrations(version, dir)
+}
+
+func (g *gcs) UpdateStatus(version uint, status source.Status, errstr string) {
+	g.migrations.UpdateStatus(version, status, errstr)
+}
+
+func (g *gcs) PrintSummary(dir source.Direction) {
+	g.migrations.PrintSummary(dir)
 }

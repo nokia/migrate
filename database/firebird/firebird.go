@@ -7,14 +7,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database"
-	"github.com/hashicorp/go-multierror"
-	_ "github.com/nakagami/firebirdsql"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
+
+	"github.com/hashicorp/go-multierror"
+	_ "github.com/nakagami/firebirdsql"
+	"github.com/nokia/migrate/v4"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
+	"go.uber.org/atomic"
 )
 
 func init() {
@@ -25,9 +27,7 @@ func init() {
 
 var DefaultMigrationsTable = "schema_migrations"
 
-var (
-	ErrNilConfig = fmt.Errorf("no config")
-)
+var ErrNilConfig = fmt.Errorf("no config")
 
 type Config struct {
 	DatabaseName    string
@@ -90,7 +90,6 @@ func (f *Firebird) Open(dsn string) (database.Driver, error) {
 		MigrationsTable: purl.Query().Get("x-migrations-table"),
 		DatabaseName:    purl.Path,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -136,10 +135,14 @@ func (f *Firebird) Run(migration io.Reader) error {
 	return nil
 }
 
+func (f *Firebird) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func (f *Firebird) SetVersion(version int, dirty bool) error {
 	// Always re-write the schema version to prevent empty schema version
 	// for failed down migration on the first migration
-	// See: https://github.com/golang-migrate/migrate/issues/330
+	// See: https://github.com/nokia/migrate/issues/330
 
 	// TODO: parameterize this SQL statement
 	//       https://firebirdsql.org/refdocs/langrefupd20-execblock.html

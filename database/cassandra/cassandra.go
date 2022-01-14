@@ -3,7 +3,6 @@ package cassandra
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
@@ -11,10 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/atomic"
+
 	"github.com/gocql/gocql"
-	"github.com/golang-migrate/migrate/v4/database"
-	"github.com/golang-migrate/migrate/v4/database/multistmt"
 	"github.com/hashicorp/go-multierror"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/database/multistmt"
+	"github.com/nokia/migrate/v4/source"
 )
 
 func init() {
@@ -235,6 +237,10 @@ func (c *Cassandra) Run(migration io.Reader) error {
 	return nil
 }
 
+func (c *Cassandra) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func (c *Cassandra) SetVersion(version int, dirty bool) error {
 	// DELETE instead of TRUNCATE because AWS Keyspaces does not support it
 	// see: https://docs.aws.amazon.com/keyspaces/latest/devguide/cassandra-apis.html
@@ -253,7 +259,7 @@ func (c *Cassandra) SetVersion(version int, dirty bool) error {
 
 	// Also re-write the schema version for nil dirty versions to prevent
 	// empty schema version for failed down migration on the first migration
-	// See: https://github.com/golang-migrate/migrate/issues/330
+	// See: https://github.com/nokia/migrate/issues/330
 	if version >= 0 || (version == database.NilVersion && dirty) {
 		query := `INSERT INTO "` + c.config.MigrationsTable + `" (version, dirty) VALUES (?, ?)`
 		if err := c.session.Query(query, version, dirty).Exec(); err != nil {

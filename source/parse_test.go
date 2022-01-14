@@ -18,6 +18,7 @@ func TestParse(t *testing.T) {
 				Identifier: "foobar",
 				Direction:  Up,
 				Raw:        "1_foobar.up.sql",
+				Status:     Pending,
 			},
 		},
 		{
@@ -28,6 +29,7 @@ func TestParse(t *testing.T) {
 				Identifier: "foobar",
 				Direction:  Down,
 				Raw:        "1_foobar.down.sql",
+				Status:     Pending,
 			},
 		},
 		{
@@ -38,6 +40,7 @@ func TestParse(t *testing.T) {
 				Identifier: "f-o_ob+ar",
 				Direction:  Up,
 				Raw:        "1_f-o_ob+ar.up.sql",
+				Status:     Pending,
 			},
 		},
 		{
@@ -48,6 +51,7 @@ func TestParse(t *testing.T) {
 				Identifier: "foobar",
 				Direction:  Up,
 				Raw:        "1485385885_foobar.up.sql",
+				Status:     Pending,
 			},
 		},
 		{
@@ -58,6 +62,7 @@ func TestParse(t *testing.T) {
 				Identifier: "date_foobar",
 				Direction:  Up,
 				Raw:        "20170412214116_date_foobar.up.sql",
+				Status:     Pending,
 			},
 		},
 		{

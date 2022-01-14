@@ -3,16 +3,18 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	nurl "net/url"
 	"strconv"
 	"strings"
 
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database"
+	"go.uber.org/atomic"
+
 	"github.com/hashicorp/go-multierror"
+	"github.com/nokia/migrate/v4"
+	"github.com/nokia/migrate/v4/database"
+	"github.com/nokia/migrate/v4/source"
 	_ "modernc.org/sqlite"
 )
 
@@ -204,6 +206,10 @@ func (m *Sqlite) Run(migration io.Reader) error {
 	return m.executeQuery(query)
 }
 
+func (m *Sqlite) RunFunctionMigration(fn source.MigrationFunc) error {
+	return database.ErrNotImpl
+}
+
 func (m *Sqlite) executeQuery(query string) error {
 	tx, err := m.db.Begin()
 	if err != nil {
@@ -241,7 +247,7 @@ func (m *Sqlite) SetVersion(version int, dirty bool) error {
 
 	// Also re-write the schema version for nil dirty versions to prevent
 	// empty schema version for failed down migration on the first migration
-	// See: https://github.com/golang-migrate/migrate/issues/330
+	// See: https://github.com/nokia/migrate/issues/330
 	if version >= 0 || (version == database.NilVersion && dirty) {
 		query := fmt.Sprintf(`INSERT INTO %s (version, dirty) VALUES (?, ?)`, m.config.MigrationsTable)
 		if _, err := tx.Exec(query, version, dirty); err != nil {
