@@ -54,7 +54,7 @@ func (d *PartialDriver) Init(fsys fs.FS, path string) error {
 		if !e.IsDir() {
 			m, err := source.DefaultParse(e.Name())
 			if err != nil {
-				return err
+				return nil // ignore parse errors,
 			}
 			// set relative path
 			m.Raw = path
