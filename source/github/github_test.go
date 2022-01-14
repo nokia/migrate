@@ -35,7 +35,7 @@ func Test(t *testing.T) {
 
 func TestDefaultClient(t *testing.T) {
 	g := &Github{}
-	owner := "golang-migrate"
+	owner := "nokia"
 	repo := "migrate"
 	path := "source/github/examples/migrations"
 

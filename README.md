@@ -1,10 +1,10 @@
-[![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/golang-migrate/migrate/CI/master)](https://github.com/nokia/migrate/actions/workflows/ci.yaml?query=branch%3Amaster)
+[![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/nokia/migrate/CI/master)](https://github.com/nokia/migrate/actions/workflows/ci.yaml?query=branch%3Amaster)
 [![GoDoc](https://pkg.go.dev/badge/github.com/nokia/migrate)](https://pkg.go.dev/github.com/nokia/migrate/v4)
-[![Coverage Status](https://img.shields.io/coveralls/github/golang-migrate/migrate/master.svg)](https://coveralls.io/github/golang-migrate/migrate?branch=master)
-[![packagecloud.io](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/golang-migrate/migrate?filter=debs)
+[![Coverage Status](https://img.shields.io/coveralls/github/nokia/migrate/master.svg)](https://coveralls.io/github/nokia/migrate?branch=master)
+[![packagecloud.io](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/nokia/migrate?filter=debs)
 [![Docker Pulls](https://img.shields.io/docker/pulls/migrate/migrate.svg)](https://hub.docker.com/r/migrate/migrate/)
 ![Supported Go Versions](https://img.shields.io/badge/Go-1.16%2C%201.17-lightgrey.svg)
-[![GitHub Release](https://img.shields.io/github/release/golang-migrate/migrate.svg)](https://github.com/nokia/migrate/releases)
+[![GitHub Release](https://img.shields.io/github/release/nokia/migrate.svg)](https://github.com/nokia/migrate/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nokia/migrate)](https://goreportcard.com/report/github.com/nokia/migrate)
 
 # migrate
@@ -17,7 +17,7 @@ __Database migrations written in Go. Use as [CLI](#cli-usage) or import as [libr
    (Keeps the drivers lightweight, too.)
 * Database drivers don't assume things or try to correct user input. When in doubt, fail.
 
-Forked from [golang-migrate/migrate](https://github.com/golang-migrate/migrate)
+Forked from [nokia/migrate](https://github.com/nokia/migrate)
 
 ## Databases
 
@@ -174,7 +174,7 @@ Version | Supported? | Import | Notes
 --------|------------|--------|------
 **master** | :white_check_mark: | `import "github.com/nokia/migrate/v4"` | New features and bug fixes arrive here first |
 **v4** | :white_check_mark: | `import "github.com/nokia/migrate/v4"` | Used for stable releases |
-**v3** | :x: | `import "github.com/nokia/migrate"` (with package manager) or `import "gopkg.in/golang-migrate/migrate.v3"` (not recommended) | **DO NOT USE** - No longer supported |
+**v3** | :x: | `import "github.com/nokia/migrate"` (with package manager) or `import "gopkg.in/nokia/migrate.v3"` (not recommended) | **DO NOT USE** - No longer supported |
 
 ## Development and Contributing
 
