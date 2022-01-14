@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"path"
 	"path/filepath"
 	"strconv"
 
@@ -138,7 +137,7 @@ func (d *PartialDriver) ReadUp(version uint) (r io.ReadCloser, identifier string
 			return nil, m.Identifier, m.Raw, fn, nil
 		}
 		// read content of file and return
-		body, err := d.open(path.Join(d.path, m.Raw))
+		body, err := d.open(m.Raw)
 		if err != nil {
 			return nil, "", "", nil, err
 		}
@@ -160,7 +159,7 @@ func (d *PartialDriver) ReadDown(version uint) (r io.ReadCloser, identifier stri
 			return nil, m.Identifier, m.Raw, fn, nil
 		}
 		// read content of file and return
-		body, err := d.open(path.Join(d.path, m.Raw))
+		body, err := d.open(m.Raw)
 		if err != nil {
 			return nil, "", "", nil, err
 		}
