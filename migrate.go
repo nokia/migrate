@@ -316,7 +316,10 @@ func (m *Migrate) Down() error {
 
 	ret := make(chan interface{}, m.PrefetchMigrations)
 	go m.readDown(curVersion, -1, ret)
-	return m.unlockErr(m.runMigrations(ret))
+	m.sourceDrv.PrintSummary(source.Down)
+	err = m.runMigrations(ret)
+	m.sourceDrv.PrintSummary(source.Down)
+	return m.unlockErr(err)
 }
 
 // Drop deletes everything in the database.
