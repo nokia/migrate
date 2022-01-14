@@ -93,5 +93,5 @@ func (s *Stub) UpdateStatus(version uint, status source.Status, errstr string) {
 }
 
 func (s *Stub) PrintSummary(dir source.Direction) {
-	s.Migrations.PrintSummary(dir)
+	// do nothing for stub as printed fields are null.
 }
